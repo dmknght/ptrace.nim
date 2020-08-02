@@ -9,27 +9,30 @@ ptrace wrapper and helpers for Nim
 ## Example
 
 ```nim
-import ptrace/ptrace
+import ptrace
+import posix
 
-var child: Pid;
-var syscallNum: clong;
+var
+  child: Pid
+  orig_ax: clong
 
 child = fork()
 if child == 0:
   traceMe()
   discard execl("/bin/ls", "ls")
 else:
-  var a: cint
   wait(nil)
 
-  var regs = getRegs(child)
+  var regs: Registers
+  getRegs(child, addr regs)
   echo "Syscall number: ", regs.orig_rax
   if errno != 0:
-    echo errno, " ", strerror(errno)
+    echo "getRegs: ", strerror(errno)
 
-  syscallNum = peekUser(child, SYSCALL_NUM)
+  orig_ax = peekUser(child, SYSCALL_NUM)
   if errno != 0:
-    echo errno, " ", strerror(errno)
-  echo "The child made a system call: ", syscallNum
-  cont(child, nil)
+    echo "peekUser: ", errno, " ", strerror(errno)
+  echo "The child made a system call: ", orig_ax
+  cont(child)
+
 ```
